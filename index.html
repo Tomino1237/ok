@@ -143,6 +143,39 @@
             };
             list.appendChild(d);
         });
+        const form = document.getElementById('orderForm');
+
+form.onsubmit = async (e) => {
+    e.preventDefault(); // Toto zastaví to presmerovanie na Formspree stránku
+
+    const formData = new FormData(form);
+    const button = form.querySelector('button');
+    button.innerText = "Odosielam...";
+    button.disabled = true;
+
+    // Odoslanie dát cez "Fetch" (na pozadí)
+    const response = await fetch(form.action, {
+        method: form.method,
+        body: formData,
+        headers: {
+            'Accept': 'application/json'
+        }
+    });
+
+    if (response.ok) {
+        alert("✅ Objednávka bola úspešne odoslaná! Ozveme sa ti na e-mail.");
+        form.reset(); // Vyčistí formulár
+        button.innerText = "OBJEDNAŤ TLAČ";
+        button.disabled = false;
+        // Ak chceš, môžeš tu vrátiť pôvodný text do drag&drop zóny
+        document.getElementById('dropText').innerText = "Presuňte súbor sem (.glb pre náhľad)";
+        document.getElementById('view').src = ""; // Vymaže model z náhľadu
+    } else {
+        alert("❌ Ups! Niečo sa nepodarilo. Skús to znova.");
+        button.innerText = "OBJEDNAŤ TLAČ";
+        button.disabled = false;
+    }
+};
     </script>
 </body>
 </html>
