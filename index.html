@@ -3,133 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D HUB SK | Profi Tlač</title>
+    <title>Ok3D | Tlačiareň</title>
     
     <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
     <style>
-        :root { --primary: #5865F2; --bg: #0f172a; --card: #1e293b; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: white; display: flex; flex-direction: column; height: 100vh; }
+        :root { --discord: #5865F2; --bg: #f0f2f5; --text: #1c1e21; --border: #ddd; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); color: var(--text); overflow: hidden; }
         
-        header { padding: 1.5rem 2rem; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
-        h1 { margin: 0; font-size: 1.2rem; letter-spacing: 2px; color: var(--primary); }
+        /* Horná lišta */
+        header { background: white; padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); z-index: 10; }
+        header h1 { margin: 0; font-size: 1.3rem; color: var(--discord); letter-spacing: 1px; }
+        #user-display { font-size: 0.9rem; font-weight: 600; color: #65676b; background: #eee; padding: 5px 12px; border-radius: 20px; }
 
-        .main { flex: 1; display: flex; padding: 20px; gap: 20px; overflow: hidden; }
+        /* Hlavný kontajner */
+        .main-container { display: flex; flex: 1; overflow: hidden; }
         
-        /* 3D Náhľad */
-        .preview-box { flex: 2; background: var(--card); border-radius: 20px; position: relative; overflow: hidden; border: 1px solid #334155; }
-        model-viewer { width: 100%; height: 100%; background: radial-gradient(#334155, #0f172a); }
+        /* 1. Sidebar s katalógom */
+        .sidebar { width: 280px; background: white; border-right: 1px solid var(--border); padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar h3 { margin-top: 0; font-size: 1.1rem; border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-bottom: 15px; }
+        .catalog-scroll { flex: 1; overflow-y: auto; }
+        .model-item { background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .model-item:hover { border-color: var(--discord); background: #f0f2ff; }
+        .model-item p { margin: 0; font-size: 0.9rem; font-weight: 600; color: #333; }
+        .model-icon { font-size: 1.2rem; }
 
-        /* Ovládací panel */
-        .controls { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        /* 2. Preview plocha (Náhľad + Ovládanie) */
+        .preview-area { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 15px; overflow: hidden; }
         
-        /* TVOJ PÔVODNÝ DESIGN POLÍČKA */
-        .drop-zone {
-            flex: 1; border: 2px dashed #475569; border-radius: 20px;
+        /* Veľký 3D Náhľad */
+        .viewer-wrapper { flex: 1; background: white; border-radius: 15px; border: 1px solid var(--border); overflow: hidden; position: relative; }
+        model-viewer { width: 100%; height: 100%; --poster-color: transparent; background: radial-gradient(#ffffff, #f0f2f5); }
+
+        /* Spodný panel (Upload + Email + Tlačidlo) */
+        .controls-panel { display: flex; gap: 15px; align-items: stretch; background: white; padding: 15px; border-radius: 15px; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        
+        /* TVOJE PÔVODNÉ DRAG N DROP POLÍČKO */
+        .custom-upload-box { 
+            flex: 2; background: #fafafa; border: 3px dashed #cbd5e1; border-radius: 12px; padding: 20px; 
+            text-align: center; cursor: pointer; transition: 0.3s; position: relative;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: var(--card); cursor: pointer; transition: 0.3s; padding: 20px; text-align: center;
         }
-        .drop-zone:hover { border-color: var(--primary); background: #1e2945; }
-        .drop-zone p { color: #94a3b8; font-size: 0.9rem; }
+        /* ROZSVIETENIE PRI DRAGOVER */
+        .custom-upload-box.dragging { border-color: var(--discord); background: #f0f7ff; color: var(--discord); }
+        .custom-upload-box p { margin: 5px 0 0 0; color: #4b5563; font-weight: 500; font-size: 0.9rem; }
+        .upload-icon { font-size: 1.8rem; opacity: 0.7; }
 
-        input[type="email"] {
-            background: #0f172a; border: 1px solid #334155; padding: 15px;
-            border-radius: 12px; color: white; font-size: 1rem; outline: none;
+        /* Vstup pre Email a Tlačidlo */
+        .action-box { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+        
+        .email-input { 
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; 
+            font-size: 1rem; box-sizing: border-box; background: #fafafa;
         }
-        input[type="email"]:focus { border-color: var(--primary); }
+        .email-input:focus { border-color: var(--discord); outline: none; background: white; }
 
-        .btn-send {
-            background: var(--primary); color: white; border: none; padding: 18px;
-            border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        .btn-submit { 
+            background: var(--discord); color: white; border: none; padding: 12px; 
+            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem;
+            transition: 0.2s; width: 100%;
         }
-        .btn-send:hover { opacity: 0.9; transform: translateY(-2px); }
-        .btn-send:disabled { background: #475569; cursor: not-allowed; }
+        .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-submit:disabled { background: #bdc3c7; cursor: not-allowed; transform: none; }
 
-        /* SKRYTIE UPLOADCARE WIDGETU */
+        /* !!! SKRYTIE TOHO ŠKAREDÉHO OKNA UPLOADCARE !!! */
         .uploadcare--widget { display: none !important; }
+        
+        /* Progress bar pre nahrávanie */
+        #upload-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--discord); width: 0%; transition: width 0.1s; border-radius: 0 0 12px 12px; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>3D HUB SK</h1>
-        <div id="status-tag" style="font-size: 0.8rem; opacity: 0.6;">READY TO PRINT</div>
+        <h1>Ok3D</h1>
+        <div id="user-display">Hosť</div>
     </header>
 
-    <div class="main">
-        <div class="preview-box">
-            <model-viewer id="viewer" src="" camera-controls auto-rotate shadow-intensity="1"></model-viewer>
-        </div>
+    <div class="main-container">
+        <aside class="sidebar">
+            <h3>Katalóg</h3>
+            <div class="catalog-scroll" id="catalog-list">
+                </div>
+        </aside>
 
-        <div class="controls">
-            <div class="drop-zone" id="custom-drop">
-                <div id="icon" style="font-size: 2rem; margin-bottom: 10px;">📦</div>
-                <p id="file-name">Potiahni sem model<br><span style="font-size: 0.7rem;">(GLB, STL, 3MF)</span></p>
+        <main class="preview-area">
+            <div class="viewer-wrapper">
+                <model-viewer id="viewer" src="" camera-controls auto-rotate shadow-intensity="1" environment-image="neutral"></model-viewer>
             </div>
-
-            <input type="email" id="user-email" placeholder="Tvoj kontaktný e-mail">
             
-            <input type="hidden" role="uploadcare-uploader" id="real-uploader" 
-                   data-public-key="2113eada7cd60c81c6dc" 
-                   data-tabs="file">
+            <div class="controls-panel">
+                <div class="custom-upload-box" id="drop-zone">
+                    <div class="upload-icon">📦</div>
+                    <p id="status-text">Potiahni sem model (.glb, .stl, .3mf)</p>
+                    <div id="upload-progress"></div>
+                </div>
 
-            <button id="send-btn" class="btn-send">ODOSLAŤ OBJEDNÁVKU</button>
-        </div>
+                <input type="hidden" role="uploadcare-uploader" id="real-uploader" 
+                       data-public-key="demopublickey" 
+                       data-tabs="file">
+
+                <div class="action-box">
+                    <input type="email" id="email-input" class="email-input" placeholder="Tvoj e-mail">
+                    <button id="send-button" class="btn-submit">ODOSLAŤ OBJEDNÁVKU</button>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script>
+        // !!! SEM VLOŽ SVOJE KĽÚČE !!!
         const DISCORD_URL = "https://discord.com/api/webhooks/1494401052605284552/KsxGcDjMXQZcAgZafiTlXkgQmYbfC61AAha0nQ5h2rqJPIL7waUlqlIpeM8HkaHmpvBR";
-        
-        const customDrop = document.getElementById('custom-drop');
-        const fileNameText = document.getElementById('file-name');
-        const btn = document.getElementById('send-btn');
+        const UPLOADCARE_KEY = "2113eada7cd60c81c6dc";
+
+        // Nastavenie Uploadcare kľúča dynamicky
+        document.getElementById('real-uploader').setAttribute('data-public-key', UPLOADCARE_KEY);
+
         const viewer = document.getElementById('viewer');
+        const dropZone = document.getElementById('drop-zone');
+        const sendBtn = document.getElementById('send-button');
+        const statusText = document.getElementById('status-text');
+        const emailInput = document.getElementById('email-input');
+        const progressBar = document.getElementById('upload-progress');
         
-        // Získame prístup k Uploadcare "na pozadí"
+        // Získame prístup k skrytému Uploadcare Widgetu
         const widget = uploadcare.Widget('#real-uploader');
 
-        // Keď niekto klikne na tvoje políčko, otvorí sa nahrávanie
-        customDrop.onclick = () => {
+        // PREPOJENIE TVOJHO POLÍČKA SO SKRYTÝM WIDGETOM
+        
+        // 1. Kliknutie na tvoje políčko otvorí dialóg
+        dropZone.onclick = () => {
+            // Simulujeme klik na skryté tlačidlo Uploadcare
             document.querySelector('.uploadcare--widget__button_type_open').click();
         };
 
-        // Keď sa súbor vyberie/nahrá
+        // 2. Drag & Drop efekty (Rozsvietenie)
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragging'); statusText.innerText = "Pusti súbor sem!"; };
+        dropZone.ondragleave = () => { dropZone.classList.remove('dragging'); statusText.innerText = "Potiahni sem model (.glb, .stl, .3mf)"; };
+        
+        // 3. Spracovanie dropu súboru
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragging');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                // Podstrčíme súbor skrytému widgetu
+                widget.uploadFromTab('file', files); 
+            }
+        };
+
+        // SLEDOVANIE NAHRÁVANIA (Na pozadí)
+        widget.onDialogClose((dialog) => {
+            // Ak používateľ zavrel okno bez výberu, vrátime text
+            if (!widget.value()) statusText.innerText = "Potiahni sem model (.glb, .stl, .3mf)";
+        });
+
         widget.onUploadComplete((info) => {
-            console.log("Súbor nahratý:", info);
-            fileNameText.innerHTML = `<b style="color:#10b981">PRIPRAVENÉ:</b><br>${info.name}`;
+            // Nahrávanie skončilo
+            console.log("Súbor pripravený:", info);
+            statusText.innerHTML = `✅ <b style="color:#10b981">Pripravené:</b> ${info.name}`;
+            progressBar.style.width = '0%'; // Skryjeme progress bar
             
-            // Ak je to GLB, ukážeme náhľad
+            // Náhľad len pre .glb
             if (info.name.toLowerCase().endsWith('.glb')) {
                 viewer.src = info.originalUrl;
+            } else {
+                viewer.src = ""; // Vymazať predchádzajúci náhľad
             }
         });
 
-        btn.onclick = async () => {
-            const email = document.getElementById('user-email').value;
-            const fileInfo = widget.value();
+        // Sledovanie progressu (nepovinné, ale profi)
+        const circle = document.querySelector('.uploadcare--widget__progress');
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    // Uploadcare interne počíta progress, skúsime ho vytiahnuť (toto je trik)
+                    const text = document.querySelector('.uploadcare--widget__text_type_text').innerText;
+                    if (text.includes('%')) {
+                        statusText.innerText = "Nahrávam: " + text;
+                        progressBar.style.width = text;
+                    }
+                }
+            });
+        });
+        // Observer musíme spustiť až keď sa widget inicializuje
+        setTimeout(() => {
+             const widgetElem = document.querySelector('.uploadcare--widget');
+             if(widgetElem) observer.observe(widgetElem, { attributes: true, subtree: true });
+        }, 1000);
 
-            if (!email.includes('@')) return alert("Zadaj email!");
+
+        // ODOSIELANIE NA DISCORD
+        sendBtn.onclick = async () => {
+            const email = emailInput.value;
+            const fileInfo = widget.value(); // Získa info o súbore (Promise)
+
+            if (!email.includes('@')) return alert("Zadaj platný e-mail!");
             if (!fileInfo) return alert("Najprv nahraj súbor!");
 
-            btn.disabled = true;
-            btn.innerText = "ODOSIELAM...";
+            sendBtn.disabled = true;
+            sendBtn.innerText = "⏳ Posielam objednávku...";
 
+            // fileInfo je Promise, musíme počkať na dokončenie
             fileInfo.done(async (info) => {
-                const message = {
-                    content: `🚀 **NOVÁ OBJEDNÁVKA**\n**Email:** \`${email}\`\n**Súbor:** \`${info.name}\`\n**Veľkosť:** ${(info.size/1024/1024).toFixed(2)} MB\n**Link:** ${info.originalUrl}`
+                const messageData = {
+                    content: `🆕 **NOVA OBJEDNÁVKA**\n**Zákazník:** \`${email}\`\n**Model:** \`${info.name}\`\n**Veľkosť:** ${(info.size/1024/1024).toFixed(2)} MB\n**ODKAZ:** ${info.originalUrl}`
                 };
 
-                await fetch(DISCORD_URL, {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(message)
-                });
+                try {
+                    const response = await fetch(DISCORD_URL, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(messageData)
+                    });
 
-                alert("✅ Objednávka bola odoslaná!");
-                location.reload();
+                    if (response.ok) {
+                        alert("🚀 Úspech! Objednávka bola odoslaná na Discord.");
+                        location.reload(); 
+                    } else {
+                        alert("❌ Chyba pri komunikácii s Discordom.");
+                    }
+                } catch (err) {
+                    alert("❌ Chyba siete.");
+                } finally {
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = "ODOSLAŤ OBJEDNÁVKU";
+                }
             });
         };
+
+        // Predvolené modely v katalógu (Testovacie)
+        const predvoleneModely = [
+            { meno: "Kocka 2x2x2 (Test)", url: "https://modelviewer.dev/shared-assets/models/Astronaut.glb", icon: "📦" },
+            { meno: "Busta (Ukážka)", url: "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb", icon: "👤" },
+             { meno: "Ozubené koleso", url: "", icon: "⚙️" }
+        ];
+
+        const listContainer = document.getElementById('catalog-list');
+        predvoleneModely.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'model-item';
+            div.innerHTML = `<span class="model-icon">${m.icon}</span><p>${m.meno}</p>`;
+            div.onclick = () => { 
+                if (m.url) {
+                    viewer.src = m.url;
+                    statusText.innerText = "Vybrané z katalógu: " + m.meno;
+                    // Resetujeme widget, aby sa neodosielal predchádzajúci súbor
+                    widget.value(null); 
+                } else {
+                    alert("Tento model nemá náhľad.");
+                }
+            };
+            listContainer.appendChild(div);
+        });
     </script>
 </body>
 </html>
