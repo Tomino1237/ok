@@ -2,95 +2,147 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <title>3D Tlačiareň - Online Prehliadač</title>
+    <title>3D HUB SK - Print Service</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); color: var(--text); }
+        :root { --primary: #2563eb; --accent: #3b82f6; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); }
         
-        /* Horná lišta */
         header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
-        header h1 { margin: 0; font-size: 1.5rem; cursor: pointer; color: var(--primary); }
-        .search-box { background: #f1f5f9; border: none; padding: 0.6rem 1rem; border-radius: 8px; width: 300px; outline: none; }
-
-        /* Hlavný obsah */
         .container { display: flex; flex: 1; overflow: hidden; }
-
-        /* Sidebar */
-        .sidebar { width: 280px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
-        .sidebar h2 { font-size: 1rem; padding: 1.5rem 1.5rem 0.5rem; margin: 0; opacity: 0.7; }
-        #modelList { flex: 1; overflow-y: auto; padding: 1rem; }
-        .model-card { background: #f1f5f9; padding: 1rem; border-radius: 10px; margin-bottom: 0.8rem; cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
-        .model-card:hover { transform: translateY(-2px); border-color: var(--primary); background: #eff6ff; }
-        .model-card p { margin: 0; font-weight: 600; font-size: 0.9rem; }
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 1rem; }
 
         /* Preview zóna */
-        .preview-pane { flex: 1; position: relative; display: flex; flex-direction: column; padding: 20px; }
-        model-viewer { width: 100%; flex: 1; background: radial-gradient(#ffffff, #e2e8f0); border-radius: 20px; }
+        .preview-pane { flex: 1; display: flex; flex-direction: column; padding: 20px; position: relative; }
+        model-viewer { width: 100%; flex: 1; background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; }
         
-        /* Nahrávacia zóna */
-        .upload-bar { background: white; margin-top: 20px; padding: 1.5rem; border-radius: 15px; border: 2px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
-        .btn-order { background: var(--primary); color: white; border: none; padding: 0.8rem 2rem; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        /* Drag & Drop Zóna */
+        .drop-zone {
+            margin-top: 15px; padding: 30px; border: 3px dashed #cbd5e1; border-radius: 15px;
+            text-align: center; background: white; transition: 0.3s; cursor: pointer;
+        }
+        .drop-zone.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+
+        /* Popup na email */
+        #email-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); 
+            display: flex; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 400px; text-align: center; }
+        input[type="email"], input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        
+        .model-card { background: #f1f5f9; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; }
+        .btn-send { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
+    <div id="email-modal">
+        <div class="modal-content">
+            <h2>Vitaj! 👋</h2>
+            <p>Zadaj svoj e-mail pre spustenie aplikácie:</p>
+            <input type="email" id="user-email-input" placeholder="tvoj@email.com" required>
+            <button class="btn-send" onclick="saveEmail()">Vstúpiť</button>
+        </div>
+    </div>
+
     <header>
         <h1 onclick="location.reload()">3D HUB SK</h1>
-        <input type="text" class="search-box" id="search" placeholder="Hľadať v ponuke..." onkeyup="filterModels()">
+        <div id="welcome-msg" style="font-size: 0.9rem; color: gray;"></div>
     </header>
 
     <div class="container">
-        <aside class="sidebar">
-            <h2>DOSTUPNÉ MODELY</h2>
-            <div id="modelList"></div>
+        <aside class="sidebar" id="modelList">
+            <h3>Dostupné modely</h3>
         </aside>
 
         <main class="preview-pane">
             <model-viewer id="view" src="" camera-controls auto-rotate shadow-intensity="1"></model-viewer>
             
-            <div class="upload-bar">
-                <div>
-                    <strong>Chceš vytlačiť vlastné?</strong><br>
-                    <input type="file" id="up" accept=".glb">
+            <form id="orderForm" action="https://formspree.io/f/mvzdkrnb" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="zakaznik_email" id="hidden-email">
+                <input type="hidden" name="vybrany_model" id="hidden-model-name">
+                
+                <div class="drop-zone" id="dropZone">
+                    <p id="dropText">Presuňte súbor sem (.glb pre náhľad)</p>
+                    <input type="file" name="priloha" id="fileInput" style="display: none;" accept=".glb,.stl,.3mf">
                 </div>
-                <button class="btn-order" onclick="alert('Objednávka odoslaná na váš e-mail!')">ODOSLAŤ NA TLAČ</button>
-            </div>
+                
+                <button type="submit" class="btn-send">OBJEDNAŤ TLAČ</button>
+            </form>
         </main>
     </div>
 
     <script>
+        const view = document.getElementById('view');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const dropText = document.getElementById('dropText');
+
+        // 1. Email Logic
+        function saveEmail() {
+            const email = document.getElementById('user-email-input').value;
+            if (email.includes('@')) {
+                localStorage.setItem('userEmail', email);
+                document.getElementById('email-modal').style.display = 'none';
+                document.getElementById('hidden-email').value = email;
+                document.getElementById('welcome-msg').innerText = "Prihlásený: " + email;
+            }
+        }
+
+        window.onload = () => {
+            const saved = localStorage.getItem('userEmail');
+            if (saved) {
+                document.getElementById('email-modal').style.display = 'none';
+                document.getElementById('hidden-email').value = saved;
+                document.getElementById('welcome-msg').innerText = "Prihlásený: " + saved;
+            }
+        };
+
+        // 2. Drag & Drop Logic
+        dropZone.onclick = () => fileInput.click();
+
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('active'); dropText.innerText = "Pustite súbor!"; };
+        dropZone.ondragleave = () => { dropZone.classList.remove('active'); dropText.innerText = "Presuňte súbor sem (.glb pre náhľad)"; };
+        
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        };
+
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if (file) {
+                dropText.innerText = "Vybrané: " + file.name;
+                document.getElementById('hidden-model-name').value = "Vlastný súbor: " + file.name;
+                // Prehliadač zobrazí len .glb, ostatné formáty len odošle na mail
+                if (file.name.endsWith('.glb')) {
+                    view.src = URL.createObjectURL(file);
+                } else {
+                    alert("Súbor " + file.name + " bude odoslaný na tlač, ale tvoj prehliadač nepodporuje jeho náhľad.");
+                }
+            }
+        }
+
+        // 3. Modely v zozname
         const modely = [
-            { meno: "Astronaut v skafandri", url: "https://modelviewer.dev/shared-assets/models/Astronaut.glb" },
-            { meno: "Robot Helper", url: "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb" },
-            { meno: "Drevená stolička", url: "https://modelviewer.dev/shared-assets/models/Chair.glb" }
+            { meno: "Astronaut", url: "https://modelviewer.dev/shared-assets/models/Astronaut.glb" }
         ];
 
         const list = document.getElementById('modelList');
-        const view = document.getElementById('view');
-
-        function render(items) {
-            list.innerHTML = "";
-            items.forEach(m => {
-                const card = document.createElement('div');
-                card.className = 'model-card';
-                card.innerHTML = `<p>${m.meno}</p>`;
-                card.onclick = () => view.src = m.url;
-                list.appendChild(card);
-            });
-        }
-
-        function filterModels() {
-            const query = document.getElementById('search').value.toLowerCase();
-            render(modely.filter(m => m.meno.toLowerCase().includes(query)));
-        }
-
-        document.getElementById('up').onchange = (e) => {
-            const f = e.target.files[0];
-            if(f) view.src = URL.createObjectURL(f);
-        };
-
-        render(modely);
+        modely.forEach(m => {
+            const d = document.createElement('div');
+            d.className = 'model-card';
+            d.innerText = m.meno;
+            d.onclick = () => { 
+                view.src = m.url; 
+                document.getElementById('hidden-model-name').value = m.meno;
+            };
+            list.appendChild(d);
+        });
     </script>
 </body>
 </html>
