@@ -97,15 +97,17 @@
         const viewer = document.getElementById('viewer');
         const sendBtn = document.getElementById('sendBtn');
         
-        let uploadedFile = null;
+    let uploadedFile = null;
 
-        // POČÚVAME NA DOKONČENIE NAHRÁVANIA (Pre nový Minimal Uploader)
+        // POČÚVAME NA DOKONČENIE NAHRÁVANIA
         ctxProvider.addEventListener('common-upload-success', (e) => {
-            // e.detail obsahuje zoznam nahratých súborov
-            uploadedFile = e.detail;
-            console.log("Súbor úspešne nahratý:", uploadedFile);
+            // POZOR: Nový uploader posiela zoznam súborov, berieme ten prvý
+            const allFiles = e.detail.allEntries;
+            uploadedFile = allFiles[0]; // Toto vytiahne dáta o súbore
+
+            console.log("Dáta o súbore:", uploadedFile);
             
-            // Ak je to GLB, ukážeme ho v náhľade
+            // Náhľad v 3D vieweri (ak je to GLB)
             if (uploadedFile.name.toLowerCase().endsWith('.glb')) {
                 viewer.src = uploadedFile.cdnUrl;
             }
@@ -116,11 +118,12 @@
             const email = document.getElementById('email').value;
 
             if (!email.includes('@')) return alert("Zadaj e-mail!");
-            if (!uploadedFile) return alert("Najprv nahraj súbor cez políčko!");
+            if (!uploadedFile || !uploadedFile.cdnUrl) return alert("Najprv nahraj súbor a počkaj na dokončenie!");
 
             sendBtn.disabled = true;
             sendBtn.innerText = "⏳ Posielam...";
 
+            // TU JE OPRAVA: Použijeme priamo uploadedFile.cdnUrl
             const message = {
                 content: `🚀 **NOVÁ OBJEDNÁVKA**\n**Zákazník:** \`${email}\`\n**Model:** \`${uploadedFile.name}\`\n**Link:** ${uploadedFile.cdnUrl}`
             };
@@ -142,6 +145,8 @@
             } catch (err) {
                 alert("❌ Chyba siete.");
                 sendBtn.disabled = false;
+            }
+        };
             }
         };
     </script>
