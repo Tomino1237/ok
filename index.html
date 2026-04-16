@@ -160,14 +160,16 @@
             };
 
             formData.append("payload_json", JSON.stringify(messageData));
-            formData.append("file", currentFile);
-
+            formData.append("file", currentFile, currentFile.name);
             try {
                 const response = await fetch(DISCORD_URL, {
-                    method: "POST",
-                    body: formData
-                });
-
+    method: "POST",
+    body: formData,
+    headers: {
+        'Accept': 'application/json' 
+        // TU NESMIE BYŤ CONTENT-TYPE!
+    }
+});
                 if (response.ok) {
                     alert("🚀 Hotovo! Objednávka pristála na našom Discorde.");
                     location.reload(); // Refreshne stránku po úspechu
