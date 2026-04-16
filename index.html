@@ -2,91 +2,67 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <title>3D HUB SK - Fix</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <title>3D HUB SK - Bez limitov</title>
+    <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
-        .box { background: white; padding: 30px; border-radius: 15px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #viewer { width: 100%; height: 300px; background: #eee; border-radius: 10px; margin-bottom: 15px; }
-        .drop-zone { border: 3px dashed #ccc; padding: 20px; cursor: pointer; margin-bottom: 15px; }
-        .btn { background: #5865F2; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        .btn:disabled { background: #ccc; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+        .uploadcare--widget { margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn { background: #5865F2; color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <h2>Odoslať 3D model</h2>
-        <model-viewer id="viewer" camera-controls auto-rotate></model-viewer>
+    <div class="card">
+        <h2>🚀 3D Objednávka</h2>
+        <p>Nahraj model (aj veľké súbory)</p>
         
-        <div class="drop-zone" id="dropZone">
-            <p id="status">Klikni alebo sem hoď .glb súbor</p>
-            <input type="file" id="fileInput" style="display: none;">
-        </div>
+        <input type="hidden" role="uploadcare-uploader" name="my_file" id="uploader" 
+               data-public-key="2113eada7cd60c81c6dc" 
+               data-tabs="file">
 
-        <input type="email" id="email" placeholder="Tvoj e-mail" style="width:100%; padding:10px; margin-bottom:15px; box-sizing:border-box;">
+        <input type="email" id="email" placeholder="Tvoj e-mail">
         <button id="sendBtn" class="btn">ODOSLAŤ NA DISCORD</button>
     </div>
 
     <script>
-        const DISCORD_URL = "https://discord.com/api/webhooks/1494401052605284552/KsxGcDjMXQZcAgZafiTlXkgQmYbfC61AAha0nQ5h2rqJPIL7waUlqlIpeM8HkaHmpvBR"; 
+        const DISCORD_URL = "https://discord.com/api/webhooks/1494401052605284552/KsxGcDjMXQZcAgZafiTlXkgQmYbfC61AAha0nQ5h2rqJPIL7waUlqlIpeM8HkaHmpvBR";
 
-        const fileInput = document.getElementById('fileInput');
-        const dropZone = document.getElementById('dropZone');
-        const viewer = document.getElementById('viewer');
-        const status = document.getElementById('status');
-        const sendBtn = document.getElementById('sendBtn');
-        let selectedFile = null;
+        const btn = document.getElementById('sendBtn');
+        const widget = uploadcare.Widget('#uploader');
 
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = (e) => handleFile(e.target.files[0]);
-
-        function handleFile(file) {
-            if (!file) return;
-            selectedFile = file;
-            status.innerText = "Vybraté: " + file.name;
-            if (file.name.endsWith('.glb')) {
-                viewer.src = URL.createObjectURL(file);
-            }
-        }
-
-        sendBtn.onclick = async () => {
+        btn.onclick = async () => {
             const email = document.getElementById('email').value;
-            if (!selectedFile || !email.includes('@')) return alert("Vyber súbor a zadaj e-mail!");
+            const fileInfo = widget.value(); // Získa info o nahratom súbore
 
-            sendBtn.disabled = true;
-            sendBtn.innerText = "Odosielam...";
+            if (!email.includes('@') || !fileInfo) {
+                return alert("Zadaj email a počkaj na nahranie súboru!");
+            }
 
-            const formData = new FormData();
-            // Discord vyžaduje payload_json pre textovú časť
-            const payload = {
-                content: `🚀 **Nová objednávka!**\n**Email:** ${email}\n**Súbor:** ${selectedFile.name}`
-            };
+            btn.disabled = true;
+            btn.innerText = "Odosielam info...";
 
-            formData.append("payload_json", JSON.stringify(payload));
-            formData.append("file", selectedFile, selectedFile.name);
+            // Keď widget dokončí nahrávanie, dostaneme URL
+            fileInfo.done(async (info) => {
+                const message = {
+                    content: `🔥 **MÁŠ NOVÚ OBJEDNÁVKU!**\n**Zákazník:** ${email}\n**Model:** ${info.name}\n**ODKAZ NA STIAHNUTIE:** ${info.originalUrl}`
+                };
 
-            try {
-                const response = await fetch(DISCORD_URL, {
+                const res = await fetch(DISCORD_URL, {
                     method: "POST",
-                    body: formData
-                    // ŽIADNE HEADERS! Prehliadač ich spraví sám správne.
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message)
                 });
 
-                if (response.ok) {
-                    alert("✅ Úspešne odoslané na Discord!");
+                if (res.ok) {
+                    alert("✅ Objednávka prijatá! Odkaz je na Discorde.");
                     location.reload();
                 } else {
-                    const errText = await response.text();
-                    console.error(errText);
-                    alert("❌ Discord zamietol súbor. Skús menší alebo iný formát.");
+                    alert("❌ Chyba pri spojení s Discordom.");
+                    btn.disabled = false;
                 }
-            } catch (err) {
-                alert("❌ Chyba siete.");
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.innerText = "ODOSLAŤ NA DISCORD";
-            }
+            });
         };
     </script>
 </body>
